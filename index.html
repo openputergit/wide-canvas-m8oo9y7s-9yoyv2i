@@ -1,0 +1,1550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VidMarket - Video Marketplace for Creators</title>
+    <script src="https://unpkg.com/@supabase/supabase-js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            font-family: 'Inter', sans-serif;
+        }
+        .video-preview {
+            position: relative;
+        }
+        .watermark {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: rgba(255,255,255,0.5);
+            font-size: 24px;
+            pointer-events: none;
+        }
+        .loader {
+            border: 3px solid #f3f3f3;
+            border-radius: 50%;
+            border-top: 3px solid #3498db;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .video-card {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .video-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        .badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            padding: 4px 8px;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <!-- Navigation -->
+    <nav class="bg-white shadow-lg sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center">
+                    <span class="text-xl font-bold text-blue-600">VidMarket</span>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <button onclick="showLoginModal()" id="loginBtn" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors">Login</button>
+                    <button onclick="showRegisterModal()" id="registerBtn" class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors">Register</button>
+                    <div id="userMenu" class="hidden relative">
+                        <button onclick="toggleDropdown()" class="flex items-center space-x-2">
+                            <i class="bi bi-person-circle text-2xl"></i>
+                            <span id="username">User</span>
+                            <i class="bi bi-chevron-down"></i>
+                        </button>
+                        <div id="dropdown" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10">
+                            <a href="#" onclick="showDashboard()" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">Dashboard</a>
+                            <a href="#" onclick="showLibrary()" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">My Library</a>
+                            <a href="#" onclick="showWallet()" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">Wallet</a>
+                            <a href="#" onclick="logout()" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">Logout</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 py-8">
+        <div id="homeContent">
+            <section class="py-10">
+                <div class="text-center mb-12">
+                    <h1 class="text-5xl font-bold text-gray-800 mb-4">Welcome to VidMarket</h1>
+                    <p class="text-xl text-gray-600 max-w-2xl mx-auto">The first marketplace connecting local vendors with content creators</p>
+                </div>
+                
+                <div class="grid md:grid-cols-2 gap-8 mb-16">
+                    <div class="bg-white p-8 rounded-xl shadow-md border-t-4 border-blue-500 hover:shadow-lg transition-shadow">
+                        <div class="flex items-start mb-4">
+                            <div class="bg-blue-100 p-3 rounded-full mr-4">
+                                <i class="bi bi-shop text-2xl text-blue-600"></i>
+                            </div>
+                            <h2 class="text-2xl font-bold text-gray-800">For Vendors</h2>
+                        </div>
+                        <p class="text-gray-600 mb-6">Upload and sell your video content to creators worldwide.</p>
+                        <ul class="space-y-3 mb-6">
+                            <li class="flex items-center">
+                                <i class="bi bi-check-circle-fill text-green-500 mr-2"></i>
+                                <span>Set your own prices (₹10 - ₹100)</span>
+                            </li>
+                            <li class="flex items-center">
+                                <i class="bi bi-check-circle-fill text-green-500 mr-2"></i>
+                                <span>Track sales and earnings in real-time</span>
+                            </li>
+                            <li class="flex items-center">
+                                <i class="bi bi-check-circle-fill text-green-500 mr-2"></i>
+                                <span>Secure content distribution with anti-piracy</span>
+                            </li>
+                            <li class="flex items-center">
+                                <i class="bi bi-check-circle-fill text-green-500 mr-2"></i>
+                                <span>Instant withdrawals to your bank account</span>
+                            </li>
+                        </ul>
+                        <button onclick="showRegisterModal('vendor')" class="mt-4 bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 transition-colors w-full">Register as Vendor</button>
+                    </div>
+                    
+                    <div class="bg-white p-8 rounded-xl shadow-md border-t-4 border-green-500 hover:shadow-lg transition-shadow">
+                        <div class="flex items-start mb-4">
+                            <div class="bg-green-100 p-3 rounded-full mr-4">
+                                <i class="bi bi-camera-video text-2xl text-green-600"></i>
+                            </div>
+                            <h2 class="text-2xl font-bold text-gray-800">For Creators</h2>
+                        </div>
+                        <p class="text-gray-600 mb-6">Find and purchase unique video content for your projects.</p>
+                        <ul class="space-y-3 mb-6">
+                            <li class="flex items-center">
+                                <i class="bi bi-check-circle-fill text-green-500 mr-2"></i>
+                                <span>Browse trending content by location and category</span>
+                            </li>
+                            <li class="flex items-center">
+                                <i class="bi bi-check-circle-fill text-green-500 mr-2"></i>
+                                <span>Preview before purchase with watermarked versions</span>
+                            </li>
+                            <li class="flex items-center">
+                                <i class="bi bi-check-circle-fill text-green-500 mr-2"></i>
+                                <span>Download in full quality with usage rights</span>
+                            </li>
+                            <li class="flex items-center">
+                                <i class="bi bi-check-circle-fill text-green-500 mr-2"></i>
+                                <span>Build a personal library of purchased content</span>
+                            </li>
+                        </ul>
+                        <button onclick="showRegisterModal('creator')" class="mt-4 bg-green-500 text-white px-6 py-3 rounded-lg hover:bg-green-600 transition-colors w-full">Register as Creator</button>
+                    </div>
+                </div>
+                
+                <section class="mb-16">
+                    <h2 class="text-3xl font-bold text-gray-800 text-center mb-8">How It Works</h2>
+                    <div class="grid md:grid-cols-3 gap-8">
+                        <div class="bg-white p-6 rounded-xl shadow-md text-center">
+                            <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <span class="text-2xl font-bold text-blue-600">1</span>
+                            </div>
+                            <h3 class="text-xl font-bold mb-2">Vendors Upload Content</h3>
+                            <p class="text-gray-600">Local businesses upload authentic video footage of their products and services.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-xl shadow-md text-center">
+                            <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <span class="text-2xl font-bold text-blue-600">2</span>
+                            </div>
+                            <h3 class="text-xl font-bold mb-2">Creators Discover & Buy</h3>
+                            <p class="text-gray-600">Content creators find unique footage and purchase usage rights.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-xl shadow-md text-center">
+                            <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <span class="text-2xl font-bold text-blue-600">3</span>
+                            </div>
+                            <h3 class="text-xl font-bold mb-2">Everyone Wins</h3>
+                            <p class="text-gray-600">Vendors earn money, creators save time, and audiences get authentic content.</p>
+                        </div>
+                    </div>
+                </section>
+                
+                <section class="text-center mb-16">
+                    <h2 class="text-3xl font-bold text-gray-800 mb-4">Ready to Get Started?</h2>
+                    <p class="text-xl text-gray-600 max-w-2xl mx-auto mb-8">Join our growing marketplace of vendors and content creators today.</p>
+                    <div class="flex flex-col sm:flex-row justify-center gap-4">
+                        <button onclick="showRegisterModal()" class="bg-blue-500 text-white px-8 py-3 rounded-lg hover:bg-blue-600 transition-colors">Sign Up Now</button>
+                        <button onclick="showLoginModal()" class="bg-gray-200 text-gray-800 px-8 py-3 rounded-lg hover:bg-gray-300 transition-colors">Login</button>
+                    </div>
+                </section>
+            </section>
+        </div>
+
+        <!-- Dashboard (Hidden by default) -->
+        <div id="dashboardContent" class="hidden">
+            <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
+                <div>
+                    <h2 class="text-3xl font-bold text-gray-800">Dashboard</h2>
+                    <p class="text-gray-600" id="userType">Welcome to your vendor dashboard</p>
+                </div>
+                <div class="flex gap-4">
+                    <div class="relative">
+                        <input type="text" placeholder="Search videos..." class="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <i class="bi bi-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                    </div>
+                    <button onclick="showUploadModal()" id="uploadBtn" class="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-2">
+                        <i class="bi bi-upload"></i>
+                        <span>Upload Video</span>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Dashboard Stats -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                <div class="bg-white p-6 rounded-xl shadow-md">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-500 text-sm">Total Earnings</p>
+                            <h3 class="text-2xl font-bold">₹0</h3>
+                        </div>
+                        <div class="p-3 bg-blue-100 rounded-full">
+                            <i class="bi bi-currency-rupee text-blue-600"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-md">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-500 text-sm">Total Videos</p>
+                            <h3 class="text-2xl font-bold" id="totalVideos">0</h3>
+                        </div>
+                        <div class="p-3 bg-green-100 rounded-full">
+                            <i class="bi bi-camera-video text-green-600"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-md">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-500 text-sm">Total Sales</p>
+                            <h3 class="text-2xl font-bold">0</h3>
+                        </div>
+                        <div class="p-3 bg-purple-100 rounded-full">
+                            <i class="bi bi-bag-check text-purple-600"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-md">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-500 text-sm">View Rate</p>
+                            <h3 class="text-2xl font-bold">0%</h3>
+                        </div>
+                        <div class="p-3 bg-yellow-100 rounded-full">
+                            <i class="bi bi-eye text-yellow-600"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-xl font-bold text-gray-800">My Videos</h3>
+                <div class="flex items-center gap-2">
+                    <select id="sortOptions" class="border rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="newest">Newest First</option>
+                        <option value="oldest">Oldest First</option>
+                        <option value="price_high">Price: High to Low</option>
+                        <option value="price_low">Price: Low to High</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6" id="videoGrid">
+                <!-- Videos will be dynamically added here -->
+            </div>
+        </div>
+        
+        <!-- Library Section (Hidden by default) -->
+        <div id="libraryContent" class="hidden">
+            <div class="flex justify-between items-center mb-8">
+                <h2 class="text-3xl font-bold text-gray-800">My Library</h2>
+                <div class="relative">
+                    <input type="text" placeholder="Search purchases..." class="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <i class="bi bi-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6" id="libraryGrid">
+                <!-- Purchased videos will be dynamically added here -->
+                <div class="bg-white rounded-xl shadow-md overflow-hidden video-card">
+                    <div class="relative">
+                        <img src="https://source.unsplash.com/random/300x200?street-food" class="w-full h-48 object-cover">
+                        <div class="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black to-transparent">
+                            <p class="text-white text-sm">Purchased on: June 15, 2023</p>
+                        </div>
+                    </div>
+                    <div class="p-4">
+                        <h3 class="font-bold mb-2">Street Food Mumbai</h3>
+                        <p class="text-gray-600 text-sm mb-4">Authentic street food experience</p>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-500 text-sm">By: FoodVlogger</span>
+                            <a href="#" class="bg-blue-500 text-white px-3 py-1 rounded-lg hover:bg-blue-600 text-sm flex items-center gap-1">
+                                <i class="bi bi-download"></i> Download
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Wallet Section (Hidden by default) -->
+        <div id="walletContent" class="hidden">
+            <h2 class="text-3xl font-bold text-gray-800 mb-6">My Wallet</h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div class="bg-gradient-to-r from-blue-500 to-blue-700 p-6 rounded-xl shadow-md text-white">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-blue-100">Available Balance</p>
+                            <h3 class="text-3xl font-bold mb-1">₹0.00</h3>
+                            <p class="text-blue-100 text-sm">Last updated: Just now</p>
+                        </div>
+                        <div class="p-3 bg-white/20 rounded-full">
+                            <i class="bi bi-wallet2 text-2xl"></i>
+                        </div>
+                    </div>
+                    <div class="mt-6">
+                        <button class="bg-white text-blue-700 px-4 py-2 rounded-lg hover:bg-blue-50 transition-colors">Withdraw Funds</button>
+                    </div>
+                </div>
+                
+                <div class="bg-white p-6 rounded-xl shadow-md col-span-2">
+                    <h3 class="font-bold text-lg mb-4">Quick Actions</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <button class="p-4 border rounded-lg hover:bg-gray-50 transition-colors flex flex-col items-center justify-center gap-2">
+                            <div class="p-3 bg-blue-100 rounded-full">
+                                <i class="bi bi-bank text-blue-600"></i>
+                            </div>
+                            <span class="text-sm font-medium">Add Bank Account</span>
+                        </button>
+                        <button class="p-4 border rounded-lg hover:bg-gray-50 transition-colors flex flex-col items-center justify-center gap-2">
+                            <div class="p-3 bg-green-100 rounded-full">
+                                <i class="bi bi-receipt text-green-600"></i>
+                            </div>
+                            <span class="text-sm font-medium">View Transactions</span>
+                        </button>
+                        <button class="p-4 border rounded-lg hover:bg-gray-50 transition-colors flex flex-col items-center justify-center gap-2">
+                            <div class="p-3 bg-purple-100 rounded-full">
+                                <i class="bi bi-gear text-purple-600"></i>
+                            </div>
+                            <span class="text-sm font-medium">Payment Settings</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-white rounded-xl shadow-md p-6 mb-8">
+                <h3 class="font-bold text-lg mb-4">Transaction History</h3>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full">
+                        <thead>
+                            <tr class="border-b">
+                                <th class="py-3 text-left text-gray-600">Date</th>
+                                <th class="py-3 text-left text-gray-600">Description</th>
+                                <th class="py-3 text-left text-gray-600">Amount</th>
+                                <th class="py-3 text-left text-gray-600">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr class="border-b">
+                                <td class="py-3 text-gray-800" colspan="4">No transactions yet</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Browse Videos Section -->
+        <div id="browseContent" class="hidden">
+            <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
+                <div>
+                    <h2 class="text-3xl font-bold text-gray-800">Browse Videos</h2>
+                    <p class="text-gray-600">Discover unique content for your next project</p>
+                </div>
+                <div class="flex gap-4">
+                    <div class="relative">
+                        <input type="text" placeholder="Search videos..." class="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <i class="bi bi-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Filters -->
+            <div class="bg-white p-4 rounded-lg shadow-md mb-6">
+                <div class="flex flex-wrap gap-4">
+                    <div>
+                        <label class="block text-sm text-gray-600 mb-1">Category</label>
+                        <select class="border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="">All Categories</option>
+                            <option value="food">Food & Cuisine</option>
+                            <option value="travel">Travel & Tourism</option>
+                            <option value="lifestyle">Lifestyle</option>
+                            <option value="business">Business & Retail</option>
+                            <option value="events">Events & Festivals</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-600 mb-1">Location</label>
+                        <select class="border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="">All Locations</option>
+                            <option value="mumbai">Mumbai</option>
+                            <option value="delhi">Delhi</option>
+                            <option value="bangalore">Bangalore</option>
+                            <option value="chennai">Chennai</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-600 mb-1">Price Range</label>
+                        <select class="border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="">Any Price</option>
+                            <option value="0-25">₹0 - ₹25</option>
+                            <option value="25-50">₹25 - ₹50</option>
+                            <option value="50-75">₹50 - ₹75</option>
+                            <option value="75-100">₹75 - ₹100</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-600 mb-1">Sort By</label>
+                        <select class="border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="newest">Newest</option>
+                            <option value="popular">Most Popular</option>
+                            <option value="price_low">Price: Low to High</option>
+                            <option value="price_high">Price: High to Low</option>
+                        </select>
+                    </div>
+                    <div class="ml-auto self-end">
+                        <button class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors">Apply Filters</button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Featured Section -->
+            <div class="mb-8">
+                <h3 class="text-xl font-bold text-gray-800 mb-4">Featured Videos</h3>
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6" id="featuredVideos">
+                    <!-- Featured videos will be dynamically added here -->
+                </div>
+            </div>
+            
+            <!-- All Videos -->
+            <div>
+                <h3 class="text-xl font-bold text-gray-800 mb-4">All Videos</h3>
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6" id="allVideos">
+                    <!-- All videos will be dynamically added here -->
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white py-8 border-t">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+                <div>
+                    <h3 class="text-lg font-bold mb-4">VidMarket</h3>
+                    <p class="text-gray-600">The premier marketplace connecting vendors with content creators.</p>
+                </div>
+                <div>
+                    <h3 class="text-lg font-bold mb-4">Quick Links</h3>
+                    <ul class="space-y-2">
+                        <li><a href="#" class="text-gray-600 hover:text-blue-500">Home</a></li>
+                        <li><a href="#" class="text-gray-600 hover:text-blue-500">About Us</a></li>
+                        <li><a href="#" class="text-gray-600 hover:text-blue-500">Contact</a></li>
+                        <li><a href="#" class="text-gray-600 hover:text-blue-500">FAQ</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="text-lg font-bold mb-4">Legal</h3>
+                    <ul class="space-y-2">
+                        <li><a href="#" class="text-gray-600 hover:text-blue-500">Terms of Service</a></li>
+                        <li><a href="#" class="text-gray-600 hover:text-blue-500">Privacy Policy</a></li>
+                        <li><a href="#" class="text-gray-600 hover:text-blue-500">Copyright Info</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="text-lg font-bold mb-4">Connect</h3>
+                    <div class="flex space-x-4 mb-4">
+                        <a href="#" class="text-gray-600 hover:text-blue-500"><i class="bi bi-facebook text-xl"></i></a>
+                        <a href="#" class="text-gray-600 hover:text-blue-500"><i class="bi bi-twitter-x text-xl"></i></a>
+                        <a href="#" class="text-gray-600 hover:text-blue-500"><i class="bi bi-instagram text-xl"></i></a>
+                        <a href="#" class="text-gray-600 hover:text-blue-500"><i class="bi bi-youtube text-xl"></i></a>
+                    </div>
+                    <p class="text-gray-600">support@vidmarket.com</p>
+                </div>
+            </div>
+            <div class="border-t mt-8 pt-8 text-center text-gray-600">
+                <p>&copy; 2023 VidMarket. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Modals -->
+    <!-- Login Modal -->
+    <div id="loginModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-xl p-8 max-w-md w-full">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold">Login to VidMarket</h2>
+                <button onclick="closeLoginModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+            <form onsubmit="handleLogin(event)">
+                <div class="mb-4">
+                    <label class="block mb-2 text-gray-700">Email</label>
+                    <input type="email" id="loginEmail" class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                </div>
+                <div class="mb-6">
+                    <label class="block mb-2 text-gray-700">Password</label>
+                    <input type="password" id="loginPassword" class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                    <div class="flex justify-between mt-2">
+                        <div class="flex items-center">
+                            <input type="checkbox" id="rememberMe" class="mr-2">
+                            <label for="rememberMe" class="text-sm text-gray-600">Remember me</label>
+                        </div>
+                        <a href="#" class="text-sm text-blue-500 hover:underline">Forgot password?</a>
+                    </div>
+                </div>
+                <button type="submit" class="w-full py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">Login</button>
+                <div class="mt-4 text-center">
+                    <span class="text-gray-600">Don't have an account?</span>
+                    <a href="#" onclick="closeLoginModal(); showRegisterModal();" class="text-blue-500 hover:underline">Register</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Register Modal -->
+    <div id="registerModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-xl p-8 max-w-md w-full">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold">Create an Account</h2>
+                <button onclick="closeRegisterModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+            <form onsubmit="handleRegister(event)">
+                <div class="mb-4">
+                    <label class="block mb-2 text-gray-700">Full Name</label>
+                    <input type="text" id="registerName" class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                </div>
+                <div class="mb-4">
+                    <label class="block mb-2 text-gray-700">Email</label>
+                    <input type="email" id="registerEmail" class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                </div>
+                <div class="mb-4">
+                    <label class="block mb-2 text-gray-700">Password</label>
+                    <input type="password" id="registerPassword" class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                </div>
+                <div class="mb-6">
+                    <label class="block mb-2 text-gray-700">Account Type</label>
+                    <div class="grid grid-cols-2 gap-4">
+                        <label class="flex items-center justify-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50" id="vendorLabel">
+                            <input type="radio" name="accountType" value="vendor" id="accountTypeVendor" class="hidden" checked>
+                            <div class="text-center">
+                                <i class="bi bi-shop text-2xl mb-2 text-gray-700"></i>
+                                <p>Vendor</p>
+                            </div>
+                        </label>
+                        <label class="flex items-center justify-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50" id="creatorLabel">
+                            <input type="radio" name="accountType" value="creator" id="accountTypeCreator" class="hidden">
+                            <div class="text-center">
+                                <i class="bi bi-camera-video text-2xl mb-2 text-gray-700"></i>
+                                <p>Creator</p>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+                <div class="mb-6">
+                    <div class="flex items-center">
+                        <input type="checkbox" id="termsAgreement" class="mr-2" required>
+                        <label for="termsAgreement" class="text-sm text-gray-600">I agree to the <a href="#" class="text-blue-500 hover:underline">Terms of Service</a> and <a href="#" class="text-blue-500 hover:underline">Privacy Policy</a></label>
+                    </div>
+                </div>
+                <button type="submit" class="w-full py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors">Create Account</button>
+                <div class="mt-4 text-center">
+                    <span class="text-gray-600">Already have an account?</span>
+                    <a href="#" onclick="closeRegisterModal(); showLoginModal();" class="text-blue-500 hover:underline">Login</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Upload Modal -->
+    <div id="uploadModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-xl p-8 max-w-md w-full">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold">Upload New Video</h2>
+                <button onclick="closeUploadModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+            <form onsubmit="handleUpload(event)">
+                <div class="mb-4">
+                    <label class="block mb-2 text-gray-700">Title</label>
+                    <input type="text" id="videoTitle" class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                </div>
+                <div class="mb-4">
+                    <label class="block mb-2 text-gray-700">Description</label>
+                    <textarea id="videoDescription" class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 h-24" required></textarea>
+                </div>
+                <div class="mb-4">
+                    <label class="block mb-2 text-gray-700">Category</label>
+                    <select id="videoCategory" class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="food">Food & Cuisine</option>
+                        <option value="travel">Travel & Tourism</option>
+                        <option value="lifestyle">Lifestyle</option>
+                        <option value="business">Business & Retail</option>
+                        <option value="events">Events & Festivals</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                <div class="mb-4">
+                    <label class="block mb-2 text-gray-700">Tags (comma separated)</label>
+                    <input type="text" id="videoTags" placeholder="food, mumbai, street, etc." class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div class="mb-4">
+                    <label class="block mb-2 text-gray-700">Price (₹)</label>
+                    <input type="number" id="videoPrice" min="10" max="100" value="50" class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                    <p class="text-sm text-gray-500 mt-1">Set between ₹10 and ₹100</p>
+                </div>
+                <div class="mb-4">
+                    <label class="block mb-2 text-gray-700">Location</label>
+                    <input type="text" id="videoLocation" placeholder="Mumbai, Delhi, etc." class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div class="mb-6">
+                    <label class="block mb-2 text-gray-700">Video File</label>
+                    <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:bg-gray-50 cursor-pointer" id="dropZone">
+                        <input type="file" id="videoFile" accept="video/*" class="hidden" required>
+                        <i class="bi bi-cloud-arrow-up text-3xl text-gray-400 mb-2"></i>
+                        <p class="text-gray-500">Drag & drop your video here or click to browse</p>
+                        <p class="text-sm text-gray-400 mt-2">Max file size: 100MB</p>
+                    </div>
+                    <div id="uploadPreview" class="hidden mt-4 p-3 bg-blue-50 rounded-lg flex items-center justify-between">
+                        <div class="flex items-center">
+                            <i class="bi bi-file-earmark-play text-blue-500 mr-2"></i>
+                            <span id="fileName">file.mp4</span>
+                        </div>
+                        <button type="button" onclick="removeFile()" class="text-red-500 hover:text-red-700">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                </div>
+                <button type="submit" class="w-full py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center justify-center">
+                    <span id="uploadButtonText">Upload Video</span>
+                    <div id="uploadSpinner" class="loader ml-2 hidden"></div>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Video Preview Modal -->
+    <div id="previewModal" class="hidden fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50">
+        <div class="max-w-4xl w-full p-4">
+            <div class="flex justify-end mb-4">
+                <button onclick="closePreviewModal()" class="text-white hover:text-gray-300">
+                    <i class="bi bi-x-lg text-2xl"></i>
+                </button>
+            </div>
+            <div class="relative rounded-xl overflow-hidden video-preview">
+                <video id="previewVideo" controls class="w-full rounded-xl">
+                    <source src="" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
+                <div class="watermark">
+                    <i class="bi bi-shield-lock"></i> VidMarket Preview
+                </div>
+            </div>
+            <div class="bg-white p-6 mt-4 rounded-xl">
+                <h3 id="previewTitle" class="text-xl font-bold mb-2">Video Title</h3>
+                <p id="previewDescription" class="text-gray-600 mb-4">Video description goes here.</p>
+                <div class="flex flex-wrap gap-2 mb-4">
+                    <span class="bg-gray-100 text-gray-700 px-2 py-1 rounded-full text-xs" id="previewCategory">Category</span>
+                    <span class="bg-gray-100 text-gray-700 px-2 py-1 rounded-full text-xs" id="previewLocation">Location</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <div>
+                        <span id="previewPrice" class="text-blue-500 font-bold text-xl">₹50</span>
+                        <span class="text-gray-500 text-sm ml-2">One-time purchase</span>
+                    </div>
+                    <button onclick="purchaseVideo()" class="bg-green-500 text-white px-6 py-2 rounded-lg hover:bg-green-600 transition-colors flex items-center gap-2">
+                        <i class="bi bi-bag-check"></i>
+                        Purchase Now
+                    </button>
+                </div>
+                <div class="mt-4 pt-4 border-t">
+                    <div class="flex items-center gap-2">
+                        <i class="bi bi-shop text-gray-500"></i>
+                        <span id="previewVendor" class="text-gray-700">Vendor Name</span>
+                    </div>
+                    <div class="flex items-center gap-2 mt-2">
+                        <i class="bi bi-clock text-gray-500"></i>
+                        <span id="previewDate" class="text-gray-700">Upload Date</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Mock authentication state
+        let isLoggedIn = false;
+        let currentUser = null;
+
+        // UI Functions
+        function showLoginModal() {
+            document.getElementById('loginModal').classList.remove('hidden');
+        }
+
+        function closeLoginModal() {
+            document.getElementById('loginModal').classList.add('hidden');
+        }
+
+        function showRegisterModal(type = 'vendor') {
+            document.getElementById('registerModal').classList.remove('hidden');
+            
+            // Set the account type if specified
+            if (type === 'vendor') {
+                document.getElementById('accountTypeVendor').checked = true;
+                document.getElementById('vendorLabel').classList.add('border-blue-500', 'bg-blue-50');
+                document.getElementById('creatorLabel').classList.remove('border-green-500', 'bg-green-50');
+            } else if (type === 'creator') {
+                document.getElementById('accountTypeCreator').checked = true;
+                document.getElementById('creatorLabel').classList.add('border-green-500', 'bg-green-50');
+                document.getElementById('vendorLabel').classList.remove('border-blue-500', 'bg-blue-50');
+            }
+        }
+
+        function closeRegisterModal() {
+            document.getElementById('registerModal').classList.add('hidden');
+        }
+
+        function showUploadModal() {
+            document.getElementById('uploadModal').classList.remove('hidden');
+        }
+
+        function closeUploadModal() {
+            document.getElementById('uploadModal').classList.add('hidden');
+        }
+        
+        function showPreviewModal(video) {
+            const modal = document.getElementById('previewModal');
+            const videoElement = document.getElementById('previewVideo');
+            const titleElement = document.getElementById('previewTitle');
+            const descriptionElement = document.getElementById('previewDescription');
+            const priceElement = document.getElementById('previewPrice');
+            const categoryElement = document.getElementById('previewCategory');
+            const locationElement = document.getElementById('previewLocation');
+            const vendorElement = document.getElementById('previewVendor');
+            const dateElement = document.getElementById('previewDate');
+            
+            // Set video details
+            titleElement.textContent = video.title;
+            descriptionElement.textContent = video.description;
+            priceElement.textContent = `₹${video.price}`;
+            categoryElement.textContent = video.category.charAt(0).toUpperCase() + video.category.slice(1);
+            locationElement.textContent = video.location || "Mumbai";
+            vendorElement.textContent = video.owner;
+            
+            // Format date
+            const date = new Date(video.date);
+            dateElement.textContent = date.toLocaleDateString('en-US', { 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+            });
+            
+            // For demo, we're using a placeholder video
+            videoElement.src = 'https://assets.mixkit.co/videos/preview/mixkit-person-typing-on-a-laptop-from-above-4838-small.mp4';
+            
+            modal.classList.remove('hidden');
+        }
+        
+        function closePreviewModal() {
+            const modal = document.getElementById('previewModal');
+            const video = document.getElementById('previewVideo');
+            
+            video.pause();
+            modal.classList.add('hidden');
+        }
+
+        function toggleDropdown() {
+            const dropdown = document.getElementById('dropdown');
+            dropdown.classList.toggle('hidden');
+        }
+
+        function updateUIForLoggedInUser(user) {
+            document.getElementById('loginBtn').classList.add('hidden');
+            document.getElementById('registerBtn').classList.add('hidden');
+            document.getElementById('userMenu').classList.remove('hidden');
+            document.getElementById('username').textContent = user.name;
+            
+            // Update user type in dashboard
+            const userTypeEl = document.getElementById('userType');
+            if (user.type === 'vendor') {
+                userTypeEl.textContent = 'Welcome to your vendor dashboard';
+                // Show upload button for vendors
+                document.getElementById('uploadBtn').classList.remove('hidden');
+                showDashboard();
+            } else {
+                userTypeEl.textContent = 'Welcome to your creator dashboard';
+                // Hide upload button for creators
+                document.getElementById('uploadBtn').classList.add('hidden');
+                showBrowseContent();
+            }
+        }
+
+        function showDashboard() {
+            document.getElementById('homeContent').classList.add('hidden');
+            document.getElementById('dashboardContent').classList.remove('hidden');
+            document.getElementById('libraryContent').classList.add('hidden');
+            document.getElementById('walletContent').classList.add('hidden');
+            document.getElementById('browseContent').classList.add('hidden');
+            loadVideos();
+        }
+        
+        function showLibrary() {
+            document.getElementById('homeContent').classList.add('hidden');
+            document.getElementById('dashboardContent').classList.add('hidden');
+            document.getElementById('libraryContent').classList.remove('hidden');
+            document.getElementById('walletContent').classList.add('hidden');
+            document.getElementById('browseContent').classList.add('hidden');
+        }
+        
+        function showWallet() {
+            document.getElementById('homeContent').classList.add('hidden');
+            document.getElementById('dashboardContent').classList.add('hidden');
+            document.getElementById('libraryContent').classList.add('hidden');
+            document.getElementById('walletContent').classList.remove('hidden');
+            document.getElementById('browseContent').classList.add('hidden');
+        }
+        
+        function showBrowseContent() {
+            document.getElementById('homeContent').classList.add('hidden');
+            document.getElementById('dashboardContent').classList.add('hidden');
+            document.getElementById('libraryContent').classList.add('hidden');
+            document.getElementById('walletContent').classList.add('hidden');
+            document.getElementById('browseContent').classList.remove('hidden');
+            loadBrowseVideos();
+        }
+
+        // Auth Functions
+        function handleLogin(event) {
+            event.preventDefault();
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+
+            // Show loading state
+            const submitButton = event.target.querySelector('button[type="submit"]');
+            const originalText = submitButton.textContent;
+            submitButton.innerHTML = '<div class="loader mr-2"></div> Logging in...';
+            submitButton.disabled = true;
+
+            // Simulate API call
+            setTimeout(() => {
+                // Mock login
+                currentUser = {
+                    name: email.split('@')[0],
+                    email: email,
+                    type: 'vendor'
+                };
+                isLoggedIn = true;
+
+                submitButton.innerHTML = originalText;
+                submitButton.disabled = false;
+                
+                closeLoginModal();
+                updateUIForLoggedInUser(currentUser);
+                Swal.fire({
+                    title: 'Success!',
+                    text: 'Logged in successfully!',
+                    icon: 'success',
+                    confirmButtonColor: '#3B82F6'
+                });
+            }, 1500);
+        }
+
+        function handleRegister(event) {
+            event.preventDefault();
+            const name = document.getElementById('registerName').value;
+            const email = document.getElementById('registerEmail').value;
+            const password = document.getElementById('registerPassword').value;
+            const type = document.querySelector('input[name="accountType"]:checked').value;
+
+            // Show loading state
+            const submitButton = event.target.querySelector('button[type="submit"]');
+            const originalText = submitButton.textContent;
+            submitButton.innerHTML = '<div class="loader mr-2"></div> Creating account...';
+            submitButton.disabled = true;
+
+            // Simulate API call
+            setTimeout(() => {
+                // Mock registration
+                currentUser = { name, email, type };
+                isLoggedIn = true;
+
+                submitButton.innerHTML = originalText;
+                submitButton.disabled = false;
+                
+                closeRegisterModal();
+                updateUIForLoggedInUser(currentUser);
+                Swal.fire({
+                    title: 'Welcome to VidMarket!',
+                    text: 'Your account has been created successfully!',
+                    icon: 'success',
+                    confirmButtonColor: '#22C55E'
+                });
+            }, 1500);
+        }
+
+        function logout() {
+            isLoggedIn = false;
+            currentUser = null;
+            document.getElementById('loginBtn').classList.remove('hidden');
+            document.getElementById('registerBtn').classList.remove('hidden');
+            document.getElementById('userMenu').classList.add('hidden');
+            document.getElementById('homeContent').classList.remove('hidden');
+            document.getElementById('dashboardContent').classList.add('hidden');
+            document.getElementById('libraryContent').classList.add('hidden');
+            document.getElementById('walletContent').classList.add('hidden');
+            document.getElementById('browseContent').classList.add('hidden');
+            document.getElementById('dropdown').classList.add('hidden');
+        }
+
+        // Video Functions
+        function handleUpload(event) {
+            event.preventDefault();
+            const title = document.getElementById('videoTitle').value;
+            const description = document.getElementById('videoDescription').value;
+            const price = document.getElementById('videoPrice').value;
+            const category = document.getElementById('videoCategory').value;
+            const tags = document.getElementById('videoTags').value;
+            const location = document.getElementById('videoLocation').value || 'Mumbai';
+            
+            // Get the file from input
+            const fileInput = document.getElementById('videoFile');
+            if (!fileInput.files.length) {
+                Swal.fire({
+                    title: 'Error',
+                    text: 'Please select a video file',
+                    icon: 'error',
+                    confirmButtonColor: '#3B82F6'
+                });
+                return;
+            }
+            
+            const file = fileInput.files[0];
+            
+            // Show loading state
+            const submitButton = event.target.querySelector('button[type="submit"]');
+            document.getElementById('uploadButtonText').textContent = 'Uploading...';
+            document.getElementById('uploadSpinner').classList.remove('hidden');
+            submitButton.disabled = true;
+            
+            // Simulate upload process
+            setTimeout(() => {
+                // Generate thumbnail based on category
+                let thumbnail;
+                switch(category) {
+                    case 'food':
+                        thumbnail = 'https://source.unsplash.com/random/300x200?food';
+                        break;
+                    case 'travel':
+                        thumbnail = 'https://source.unsplash.com/random/300x200?travel';
+                        break;
+                    case 'lifestyle':
+                        thumbnail = 'https://source.unsplash.com/random/300x200?lifestyle';
+                        break;
+                    case 'business':
+                        thumbnail = 'https://source.unsplash.com/random/300x200?business';
+                        break;
+                    case 'events':
+                        thumbnail = 'https://source.unsplash.com/random/300x200?festival';
+                        break;
+                    default:
+                        thumbnail = 'https://source.unsplash.com/random/300x200';
+                }
+                
+                // Mock successful upload
+                const video = {
+                    id: Date.now(),
+                    title,
+                    description,
+                    price,
+                    category,
+                    location,
+                    tags: tags.split(',').map(tag => tag.trim()),
+                    thumbnail,
+                    owner: currentUser.name,
+                    date: new Date().toISOString()
+                };
+                
+                // Reset button state
+                document.getElementById('uploadButtonText').textContent = 'Upload Video';
+                document.getElementById('uploadSpinner').classList.add('hidden');
+                submitButton.disabled = false;
+                
+                // Reset form
+                event.target.reset();
+                document.getElementById('uploadPreview').classList.add('hidden');
+                
+                closeUploadModal();
+                addVideoToGrid(video);
+                updateTotalVideos();
+                
+                Swal.fire({
+                    title: 'Success!',
+                    text: 'Your video has been uploaded successfully!',
+                    icon: 'success',
+                    confirmButtonColor: '#3B82F6'
+                });
+            }, 2000);
+        }
+
+        function addVideoToGrid(video) {
+            const videoGrid = document.getElementById('videoGrid');
+            const videoCard = document.createElement('div');
+            videoCard.className = 'bg-white rounded-xl shadow-md overflow-hidden video-card';
+            
+            // Create badge based on category
+            let badgeColor = '';
+            switch(video.category) {
+                case 'food':
+                    badgeColor = 'bg-red-500';
+                    break;
+                case 'travel':
+                    badgeColor = 'bg-blue-500';
+                    break;
+                case 'lifestyle':
+                    badgeColor = 'bg-purple-500';
+                    break;
+                case 'business':
+                    badgeColor = 'bg-yellow-500';
+                    break;
+                case 'events':
+                    badgeColor = 'bg-green-500';
+                    break;
+                default:
+                    badgeColor = 'bg-gray-500';
+            }
+            
+            videoCard.innerHTML = `
+                <div class="relative">
+                    <img src="${video.thumbnail}" class="w-full h-48 object-cover" alt="${video.title}">
+                    <span class="badge ${badgeColor} text-white">${video.category}</span>
+                    <button onclick="showPreviewModal(${JSON.stringify(video).replace(/"/g, '&quot;')})" 
+                            class="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 opacity-0 hover:opacity-100 transition-opacity">
+                        <i class="bi bi-play-circle text-4xl text-white"></i>
+                    </button>
+                </div>
+                <div class="p-4">
+                    <h3 class="font-bold text-lg mb-1 truncate">${video.title}</h3>
+                    <p class="text-gray-600 text-sm mb-3 h-10 overflow-hidden">${video.description}</p>
+                    <div class="flex justify-between items-center">
+                        <span class="text-blue-500 font-bold">₹${video.price}</span>
+                        <div class="flex gap-2">
+                            <button onclick="editVideo(${video.id})" class="bg-gray-200 text-gray-700 p-2 rounded hover:bg-gray-300 transition-colors">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                            <button onclick="deleteVideo(${video.id})" class="bg-red-100 text-red-600 p-2 rounded hover:bg-red-200 transition-colors">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            videoGrid.prepend(videoCard);
+        }
+
+        function addVideoBrowser(video, containerId) {
+            const container = document.getElementById(containerId);
+            const videoCard = document.createElement('div');
+            videoCard.className = 'bg-white rounded-xl shadow-md overflow-hidden video-card';
+            
+            // Create badge based on category
+            let badgeColor = '';
+            switch(video.category) {
+                case 'food':
+                    badgeColor = 'bg-red-500';
+                    break;
+                case 'travel':
+                    badgeColor = 'bg-blue-500';
+                    break;
+                case 'lifestyle':
+                    badgeColor = 'bg-purple-500';
+                    break;
+                case 'business':
+                    badgeColor = 'bg-yellow-500';
+                    break;
+                case 'events':
+                    badgeColor = 'bg-green-500';
+                    break;
+                default:
+                    badgeColor = 'bg-gray-500';
+            }
+            
+            videoCard.innerHTML = `
+                <div class="relative">
+                    <img src="${video.thumbnail}" class="w-full h-48 object-cover" alt="${video.title}">
+                    <span class="badge ${badgeColor} text-white">${video.category}</span>
+                    <button onclick="showPreviewModal(${JSON.stringify(video).replace(/"/g, '&quot;')})" 
+                            class="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 opacity-0 hover:opacity-100 transition-opacity">
+                        <i class="bi bi-play-circle text-4xl text-white"></i>
+                    </button>
+                    ${video.featured ? '<span class="absolute top-0 left-0 bg-yellow-500 text-white text-xs px-2 py-1">Featured</span>' : ''}
+                </div>
+                <div class="p-4">
+                    <h3 class="font-bold text-lg mb-1 truncate">${video.title}</h3>
+                    <div class="flex items-center text-sm text-gray-500 mb-2">
+                        <i class="bi bi-geo-alt mr-1"></i>
+                        <span>${video.location}</span>
+                    </div>
+                    <p class="text-gray-600 text-sm mb-3 h-10 overflow-hidden">${video.description}</p>
+                    <div class="flex justify-between items-center">
+                        <span class="text-blue-500 font-bold">₹${video.price}</span>
+                        <button onclick="showPreviewModal(${JSON.stringify(video).replace(/"/g, '&quot;')})" 
+                                class="bg-green-100 text-green-700 px-3 py-1 rounded hover:bg-green-200 transition-colors">
+                            Preview
+                        </button>
+                    </div>
+                </div>
+            `;
+            container.appendChild(videoCard);
+        }
+
+        function loadVideos() {
+            // Mock video data
+            const videos = [
+                {
+                    id: 1,
+                    title: "Street Food Mumbai - Vada Pav Special",
+                    description: "Authentic street food experience featuring the famous Mumbai vada pav",
+                    price: 50,
+                    category: "food",
+                    location: "Mumbai",
+                    thumbnail: "https://source.unsplash.com/random/300x200?street-food",
+                    owner: "FoodVlogger",
+                    date: "2023-05-15"
+                },
+                {
+                    id: 2,
+                    title: "Sunset at Marine Drive",
+                    description: "Beautiful evening shots of the Mumbai skyline and Marine Drive",
+                    price: 75,
+                    category: "travel",
+                    location: "Mumbai",
+                    thumbnail: "https://source.unsplash.com/random/300x200?sunset",
+                    owner: "TravelCreator",
+                    date: "2023-06-22"
+                },
+                {
+                    id: 3,
+                    title: "Local Market Tour",
+                    description: "Explore the vibrant colors and sounds of a traditional Indian market",
+                    price: 60,
+                    category: "lifestyle",
+                    location: "Delhi",
+                    thumbnail: "https://source.unsplash.com/random/300x200?market",
+                    owner: currentUser?.name || "MarketVendor",
+                    date: "2023-07-10"
+                },
+                {
+                    id: 4,
+                    title: "Traditional Dance Performance",
+                    description: "Authentic folk dance from Maharashtra region captured in 4K",
+                    price: 90,
+                    category: "events",
+                    location: "Pune",
+                    thumbnail: "https://source.unsplash.com/random/300x200?dance",
+                    owner: currentUser?.name || "EventsCapture",
+                    date: "2023-08-05"
+                }
+            ];
+
+            const videoGrid = document.getElementById('videoGrid');
+            videoGrid.innerHTML = '';
+            videos.forEach(video => addVideoToGrid(video));
+            
+            updateTotalVideos();
+        }
+        
+        function loadBrowseVideos() {
+            // Mock video data for browsing
+            const featuredVideos = [
+                {
+                    id: 101,
+                    title: "Making of Traditional Dosa",
+                    description: "Step by step preparation of authentic South Indian dosa",
+                    price: 85,
+                    category: "food",
+                    location: "Bangalore",
+                    thumbnail: "https://source.unsplash.com/random/300x200?dosa",
+                    owner: "FoodExpert",
+                    date: "2023-09-15",
+                    featured: true
+                },
+                {
+                    id: 102,
+                    title: "Crowded Mumbai Local Train",
+                    description: "Real footage of Mumbai's famous local trains during rush hour",
+                    price: 65,
+                    category: "lifestyle",
+                    location: "Mumbai",
+                    thumbnail: "https://source.unsplash.com/random/300x200?train",
+                    owner: "CityVlogger",
+                    date: "2023-08-28",
+                    featured: true
+                },
+                {
+                    id: 103,
+                    title: "Morning at Fishing Harbor",
+                    description: "Fishermen at work early morning at the coastal harbor",
+                    price: 95,
+                    category: "business",
+                    location: "Kerala",
+                    thumbnail: "https://source.unsplash.com/random/300x200?fishing",
+                    owner: "CoastalCreator",
+                    date: "2023-07-19",
+                    featured: true
+                },
+                {
+                    id: 104,
+                    title: "Diwali Celebrations in Delhi",
+                    description: "Beautiful footage of Diwali lights and celebrations",
+                    price: 110,
+                    category: "events",
+                    location: "Delhi",
+                    thumbnail: "https://source.unsplash.com/random/300x200?diwali",
+                    owner: "FestivalCapture",
+                    date: "2023-11-12",
+                    featured: true
+                }
+            ];
+            
+            const allVideos = [
+                {
+                    id: 201,
+                    title: "Street Food Delhi - Chaat Special",
+                    description: "Authentic street food experience featuring famous Delhi chaat",
+                    price: 45,
+                    category: "food",
+                    location: "Delhi",
+                    thumbnail: "https://source.unsplash.com/random/300x200?chaat",
+                    owner: "DelhiFoodVlogger",
+                    date: "2023-10-05"
+                },
+                {
+                    id: 202,
+                    title: "Tea Gardens of Darjeeling",
+                    description: "Peaceful morning shots of tea plantations with mountain backdrop",
+                    price: 80,
+                    category: "travel",
+                    location: "Darjeeling",
+                    thumbnail: "https://source.unsplash.com/random/300x200?tea-garden",
+                    owner: "TravelIndia",
+                    date: "2023-09-18"
+                },
+                {
+                    id: 203,
+                    title: "Pottery Making in Jaipur",
+                    description: "Traditional pottery craftsmanship in action",
+                    price: 55,
+                    category: "lifestyle",
+                    location: "Jaipur",
+                    thumbnail: "https://source.unsplash.com/random/300x200?pottery",
+                    owner: "CraftVlogger",
+                    date: "2023-08-22"
+                },
+                {
+                    id: 204,
+                    title: "Mumbai Traffic Time-lapse",
+                    description: "Stunning time-lapse of busy Mumbai traffic at night",
+                    price: 70,
+                    category: "travel",
+                    location: "Mumbai",
+                    thumbnail: "https://source.unsplash.com/random/300x200?traffic",
+                    owner: "CityExplorer",
+                    date: "2023-07-30"
+                },
+                {
+                    id: 205,
+                    title: "Varanasi Morning Ghats",
+                    description: "Spiritual morning rituals at the holy ghats of Varanasi",
+                    price: 90,
+                    category: "travel",
+                    location: "Varanasi",
+                    thumbnail: "https://source.unsplash.com/random/300x200?varanasi",
+                    owner: "SpiritualJourney",
+                    date: "2023-06-15"
+                },
+                {
+                    id: 206,
+                    title: "Kolkata Book Market",
+                    description: "Famous College Street book market in Kolkata",
+                    price: 40,
+                    category: "lifestyle",
+                    location: "Kolkata",
+                    thumbnail: "https://source.unsplash.com/random/300x200?bookstore",
+                    owner: "LiteraryVlogger",
+                    date: "2023-05-25"
+                },
+                {
+                    id: 207,
+                    title: "Roadside Coconut Vendor",
+                    description: "Local coconut vendor preparing fresh coconut water",
+                    price: 35,
+                    category: "food",
+                    location: "Goa",
+                    thumbnail: "https://source.unsplash.com/random/300x200?coconut",
+                    owner: "BeachLife",
+                    date: "2023-04-18"
+                },
+                {
+                    id: 208,
+                    title: "Corporate Office Mumbai",
+                    description: "Modern office spaces and work culture in Mumbai",
+                    price: 75,
+                    category: "business",
+                    location: "Mumbai",
+                    thumbnail: "https://source.unsplash.com/random/300x200?office",
+                    owner: "CorporateMedia",
+                    date: "2023-03-10"
+                }
+            ];
+            
+            const featuredContainer = document.getElementById('featuredVideos');
+            const allVideosContainer = document.getElementById('allVideos');
+            
+            featuredContainer.innerHTML = '';
+            allVideosContainer.innerHTML = '';
+            
+            featuredVideos.forEach(video => addVideoBrowser(video, 'featuredVideos'));
+            allVideos.forEach(video => addVideoBrowser(video, 'allVideos'));
+        }
+
+        function purchaseVideo(videoId) {
+            if (!isLoggedIn) {
+                Swal.fire({
+                    title: 'Login Required',
+                    text: 'Please login to purchase videos',
+                    icon: 'warning',
+                    confirmButtonColor: '#3B82F6',
+                    showCancelButton: true,
+                    cancelButtonText: 'Cancel',
+                    confirmButtonText: 'Login Now'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        showLoginModal();
+                    }
+                });
+                return;
+            }
+
+            Swal.fire({
+                title: 'Confirm Purchase',
+                text: 'Would you like to purchase this video?',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#22C55E',
+                cancelButtonColor: '#6B7280',
+                confirmButtonText: 'Yes, purchase!',
+                cancelButtonText: 'Cancel'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Show loading state
+                    Swal.fire({
+                        title: 'Processing Payment',
+                        html: 'Please wait while we process your payment...',
+                        allowOutsideClick: false,
+                        didOpen: () => {
+                            Swal.showLoading();
+                        }
+                    });
+                    
+                    // Simulate payment process
+                    setTimeout(() => {
+                        closePreviewModal();
+                        // Mock purchase process
+                        Swal.fire({
+                            title: 'Purchase Successful!',
+                            text: 'Video has been added to your library.',
+                            icon: 'success',
+                            confirmButtonColor: '#22C55E'
+                        }).then(() => {
+                            // Show library after purchase
+                            showLibrary();
+                        });
+                    }, 2000);
+                }
+            });
+        }
+        
+        function editVideo(videoId) {
+            Swal.fire({
+                title: 'Edit Video',
+                text: 'This feature will be available soon!',
+                icon: 'info',
+                confirmButtonColor: '#3B82F6'
+            });
+        }
+        
+        function deleteVideo(videoId) {
+            Swal.fire({
+                title: 'Delete Video',
+                text: 'Are you sure you want to delete this video?',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#EF4444',
+                cancelButtonColor: '#6B7280',
+                confirmButtonText: 'Yes, delete it!'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Simulate deletion
+                    const videoElements = document.getElementById('videoGrid').children;
+                    for (let i = 0; i < videoElements.length; i++) {
+                        const video = videoElements[i];
+                        if (video.querySelector(`button[onclick="deleteVideo(${videoId})"]`)) {
+                            video.remove();
+                            updateTotalVideos();
+                            break;
+                        }
+                    }
+                    
+                    Swal.fire(
+                        'Deleted!',
+                        'Your video has been deleted.',
+                        'success'
+                    );
+                }
+            });
+        }
+        
+        function updateTotalVideos() {
+            const count = document.getElementById('videoGrid').children.length;
+            document.getElementById('totalVideos').textContent = count;
+        }
+
+        // File upload handling
+        document.addEventListener('DOMContentLoaded', function() {
+            const dropZone = document.getElementById('dropZone');
+            const fileInput = document.getElementById('videoFile');
+            
+            dropZone.addEventListener('click', () => {
+                fileInput.click();
+            });
+            
+            dropZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropZone.classList.add('border-blue-500', 'bg-blue-50');
+            });
+            
+            dropZone.addEventListener('dragleave', () => {
+                dropZone.classList.remove('border-blue-500', 'bg-blue-50');
+            });
+            
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('border-blue-500', 'bg-blue-50');
+                
+                if (e.dataTransfer.files.length) {
+                    fileInput.files = e.dataTransfer.files;
+                    handleFileSelection(e.dataTransfer.files[0]);
+                }
+            });
+            
+            fileInput.addEventListener('change', () => {
+                if (fileInput.files.length) {
+                    handleFileSelection(fileInput.files[0]);
+                }
+            });
+            
+            // Radio button handlers for account type
+            document.getElementById('accountTypeVendor').addEventListener('change', function() {
+                if (this.checked) {
+                    document.getElementById('vendorLabel').classList.add('border-blue-500', 'bg-blue-50');
+                    document.getElementById('creatorLabel').classList.remove('border-green-500', 'bg-green-50');
+                }
+            });
+            
+            document.getElementById('accountTypeCreator').addEventListener('change', function() {
+                if (this.checked) {
+                    document.getElementById('creatorLabel').classList.add('border-green-500', 'bg-green-50');
+                    document.getElementById('vendorLabel').classList.remove('border-blue-500', 'bg-blue-50');
+                }
+            });
+        });
+        
+        function handleFileSelection(file) {
+            // Update UI to show selected file
+            const preview = document.getElementById('uploadPreview');
+            const fileName = document.getElementById('fileName');
+            
+            fileName.textContent = file.name;
+            preview.classList.remove('hidden');
+        }
+        
+        function removeFile() {
+            const fileInput = document.getElementById('videoFile');
+            const preview = document.getElementById('uploadPreview');
+            
+            fileInput.value = '';
+            preview.classList.add('hidden');
+        }
+
+        // Anti-piracy measures
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey && (e.key === 's' || e.key === 'S')) {
+                e.preventDefault();
+                Swal.fire({
+                    title: 'Content Protection',
+                    text: 'Downloading content is not allowed!',
+                    icon: 'warning',
+                    confirmButtonColor: '#3B82F6'
+                });
+            }
+        });
+
+        document.addEventListener('contextmenu', function(e) {
+            if (e.target.tagName === 'VIDEO' || e.target.tagName === 'IMG') {
+                e.preventDefault();
+                Swal.fire({
+                    title: 'Content Protection',
+                    text: 'Right-click is disabled for content protection',
+                    icon: 'warning',
+                    confirmButtonColor: '#3B82F6'
+                });
+            }
+        });
+        
+        // Close dropdown when clicking outside
+        window.addEventListener('click', function(e) {
+            if (!e.target.closest('#userMenu') && !document.getElementById('dropdown').classList.contains('hidden')) {
+                document.getElementById('dropdown').classList.add('hidden');
+            }
+        });
+    </script>
+<script>document.body.addEventListener('wheel', e => { if (!e.ctrlKey) return; e.preventDefault(); return }, { passive: false })</script>
+	</body>
+</html>
